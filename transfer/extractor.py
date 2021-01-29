@@ -24,7 +24,7 @@ class extractor:
         self.cursor_list = self.__create_cursor_list__()
         self.column_names = self.__get_column_names__()
         self.file_list = self.__get_temp_file_list__()
-        self.__merge_temp_files__()
+        #self.__merge_temp_files__()
 
     def __get_total_rows__(self):
         ora_connection = cx_Oracle.connect(self.db_name, self.password, self.host_name, encoding=self._encoding)
@@ -45,7 +45,7 @@ class extractor:
         combined_csv.to_csv(csv_file, header=False, index=False, line_terminator='\n')
         csv_file.close()
         for file in self.file_list:
-            os.remove(os.path.join(self.data_dir_path, '{}').format(file))
+            os.remove(file)
 
     def __get_column_names__(self):
         cur = self.__get_connection_and_cursor__()
@@ -66,7 +66,7 @@ class extractor:
             thread_list.append(t)
             t.start()
             while active_count() > self.thread_count:
-                print('\n == 활성 스레드 수 ==: ' + str(active_count() - 1))
+              #  print('\n == 활성 스레드 수 ==: ' + str(active_count() - 1))
                 clocktime.sleep(1)
         for thread in thread_list:
             thread.join()
