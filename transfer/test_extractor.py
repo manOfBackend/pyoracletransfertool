@@ -12,7 +12,6 @@ class Testextractor(TestCase):
         self.host_name = "127.0.0.1"
         self.data_dir_path = "c:\\oratest"
 
-
     # @unittest.skip("skip")
     def test_fetch_138MB_4000_1THREAD(self):
         col_name = "*"
@@ -20,7 +19,7 @@ class Testextractor(TestCase):
         file_name = "output_adid_test"
         execute_query = """ select %s from %s """ % (col_name, table_name)
         count_query = """ select count(*) from %s  """ % table_name
-        extractor(count_query=count_query, execute_query=execute_query, thread_count=1, fetch_size=4000,
+        extractor(count_query=count_query, execute_query=execute_query, thread_count=4, fetch_size=10000,
                   db_name=self.db_name, password=self.password, host_name=self.host_name,
                   data_dir_path=self.data_dir_path,
                   file_name=file_name)
@@ -35,6 +34,3 @@ class Testextractor(TestCase):
                   db_name=self.db_name, password=self.password, host_name=self.host_name,
                   data_dir_path=self.data_dir_path,
                   file_name=file_name)
-
-
-

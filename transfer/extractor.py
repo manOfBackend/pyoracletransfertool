@@ -20,11 +20,21 @@ class extractor:
         self.data_dir_path = data_dir_path
         self.inc_file_name = file_name
         self._fetch_size = fetch_size
+
+        # 전체 레코드 수
         self.total_rows = self.__get_total_rows__()
+
+        # 각 청크별 커서 생성
         self.cursor_list = self.__create_cursor_list__()
-        self.column_names = self.__get_column_names__()
+
+        # 임시 파일 생성
         self.file_list = self.__get_temp_file_list__()
-        #self.__merge_temp_files__()
+
+        # 스레드 생성
+        self.__create_threads__(self.file_list)
+
+        # 파일 병합
+        # self.__merge_temp_files__()
 
     def __get_total_rows__(self):
         ora_connection = cx_Oracle.connect(self.db_name, self.password, self.host_name, encoding=self._encoding)
@@ -33,10 +43,6 @@ class extractor:
 
         cur.execute(self.count_query)
         return cur.fetchone()[0]
-
-    def __get_connection_and_cursor__(self):
-        ora_connection = cx_Oracle.connect(self.db_name, self.password, self.host_name, encoding=self._encoding)
-        return [ora_connection.cursor(), ora_connection]
 
     def __merge_temp_files__(self):
         combined_csv = pd.concat([pd.read_csv(f) for f in self.file_list])
@@ -47,37 +53,31 @@ class extractor:
         for file in self.file_list:
             os.remove(file)
 
-    def __get_column_names__(self):
-        cur = self.__get_connection_and_cursor__()
-        cur[0].execute(self.execute_query)
-        col_names = [row[0] for row in cur[0].description]
-        return col_names
-
     def __get_temp_file_list__(self):
         temp_file_path_list = []
-        inc_value = 0
-        thread_list = []
-        for cursor in self.cursor_list:
-            inc_value += 1
-            filename = self.inc_file_name + str(inc_value)
+        for i in range(len(self.cursor_list)):
+            filename = self.inc_file_name + str(i)
             temp_file_path = os.path.join(self.data_dir_path, '{}.csv').format(filename)
             temp_file_path_list.append(temp_file_path)
+        return temp_file_path_list
+
+    def __create_threads__(self, temp_file_path_list):
+        thread_list = []
+        for cursor, temp_file_path in zip(self.cursor_list, temp_file_path_list):
             t = Thread(target=self.__fetch_each_thread__, args=(cursor, temp_file_path,))
             thread_list.append(t)
             t.start()
-            while active_count() > self.thread_count:
-              #  print('\n == 활성 스레드 수 ==: ' + str(active_count() - 1))
-                clocktime.sleep(1)
-        for thread in thread_list:
-            thread.join()
-        return temp_file_path_list
+        while active_count() > self.thread_count:
+            clocktime.sleep(1)
+        for t in thread_list:
+            t.join()
 
     def __fetch_each_thread__(self, cursor, temp_file_path):
         csv_file = open(temp_file_path, "w")
         n = 0
         while True:
             n = n + 1
-            df = pd.DataFrame(cursor[0].fetchmany(self._fetch_size))
+            df = pd.DataFrame(cursor[0].fetchmany())
             if len(df) == 0:
                 break
             else:
@@ -99,6 +99,9 @@ class extractor:
             now_chunk += 1
             conn = cx_Oracle.connect(self.db_name, self.password, self.host_name, encoding=self._encoding)
             cur = conn.cursor()
+            cur.prefetchrows = self._fetch_size + 1
+            cur.arraysize = self._fetch_size
+
             print(self.execute_query + ' offset ' + str(offset) + ' rows fetch next ' + str(
                 total_chunk_count) + ' rows only;')
             cur.execute(self.execute_query + ' offset ' + str(offset) + ' rows fetch next ' + str(
