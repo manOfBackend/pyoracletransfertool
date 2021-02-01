@@ -72,7 +72,8 @@ class extractor:
         for t in thread_list:
             t.join()
 
-    def __fetch_each_thread__(self, cursor, temp_file_path):
+    @staticmethod
+    def __fetch_each_thread__(cursor, temp_file_path):
         csv_file = open(temp_file_path, "w")
         n = 0
         while True:
