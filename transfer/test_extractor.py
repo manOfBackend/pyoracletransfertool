@@ -13,7 +13,7 @@ class Testextractor(TestCase):
         self.data_dir_path = "c:\\oratest"
 
     # @unittest.skip("skip")
-    def test_fetch_138MB_4000_1THREAD(self):
+    def test_fetch_138MB_10000_4THREAD(self):
         col_name = "*"
         table_name = "adid_test"
         file_name = "output_adid_test"
