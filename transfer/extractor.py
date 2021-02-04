@@ -34,7 +34,7 @@ class extractor:
         self.__create_threads__(self.file_list)
 
         # 파일 병합
-        # self.__merge_temp_files__()
+        self.__merge_temp_files__()
 
     def __get_total_rows__(self):
         ora_connection = cx_Oracle.connect(self.db_name, self.password, self.host_name, encoding=self._encoding)
@@ -75,14 +75,13 @@ class extractor:
     @staticmethod
     def __fetch_each_thread__(cursor, temp_file_path):
         csv_file = open(temp_file_path, "w")
-        n = 0
         while True:
-            n = n + 1
             df = pd.DataFrame(cursor[0].fetchmany())
             if len(df) == 0:
                 break
             else:
                 df.to_csv(csv_file, header=False, index=False, line_terminator='\n')
+
         csv_file.close()
         cursor[0].close()
         cursor[1].close()
@@ -98,16 +97,22 @@ class extractor:
             print('전체 레코드 수: ' + str(self.total_rows))
             print('청크: ' + str(now_chunk))
             now_chunk += 1
+
             conn = cx_Oracle.connect(self.db_name, self.password, self.host_name, encoding=self._encoding)
             cur = conn.cursor()
+
+            # 마지막 fetchCall을 줄이기 위해 + 1
             cur.prefetchrows = self._fetch_size + 1
+
+            # 매 fetchCall 마다 가져오는 레코드 수
             cur.arraysize = self._fetch_size
 
-            print(self.execute_query + ' offset ' + str(offset) + ' rows fetch next ' + str(
-                total_chunk_count) + ' rows only;')
-            cur.execute(self.execute_query + ' offset ' + str(offset) + ' rows fetch next ' + str(
-                total_chunk_count) + ' rows only')
+            # offset부터 fetch_size 만큼 레코드를 가져옴
+            cur.execute(self.execute_query + ' offset ' + str(offset) +
+                        ' rows fetch next ' + str(total_chunk_count) + ' rows only')
+
             cursor_list.append([cur, conn])
+
             if offset < self.total_rows:
                 offset = offset + total_chunk_count
             else:
